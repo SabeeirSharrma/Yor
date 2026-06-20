@@ -45,67 +45,29 @@ function parseRepositoryList(input) {
   return [...new Set(input.split(/[\s,]+/).map((value) => value.trim()).filter(Boolean))];
 }
 
-function destinationForInteraction(interaction, destinationType, targetUser) {
-  if (destinationType === 'channel') {
-    if (!interaction.guildId) {
-      throw new Error('Channel subscriptions can only be created in a server channel.');
-    }
-
-    return {
-      destinationType: 'channel',
-      destinationId: interaction.channelId,
-    };
-  }
-
-  if (destinationType === 'user') {
-    if (!targetUser) {
-      throw new Error('A target user is required.');
-    }
-
-    return {
-      destinationType: 'user',
-      destinationId: targetUser.id,
-    };
+function destinationForUser(interaction, targetUser) {
+  if (!targetUser) {
+    throw new Error('A target user is required.');
   }
 
   return {
     destinationType: 'user',
-    destinationId: interaction.user.id,
+    destinationId: targetUser.id,
   };
 }
 
 function resolveBulkDestination(interaction, targetUser) {
-  if (targetUser) {
-    return {
-      destinationType: 'user',
-      destinationId: targetUser.id,
-    };
-  }
-
-  if (interaction.guildId) {
-    return {
-      destinationType: 'channel',
-      destinationId: interaction.channelId,
-    };
-  }
-
   return {
     destinationType: 'user',
-    destinationId: interaction.user.id,
+    destinationId: targetUser?.id ?? interaction.user.id,
   };
 }
 
 function destinationLabel(destination) {
-  return destination.destinationType === 'channel'
-    ? `<#${destination.destinationId}>`
-    : `<@${destination.destinationId}>`;
+  return `<@${destination.destinationId}>`;
 }
 
 function ensureBatchPermission(interaction, destination, targetUser) {
-  if (destination.destinationType === 'channel' && !isManageAllowed(interaction)) {
-    throw new Error('You need Manage Server or Manage Channels permission to configure channel subscriptions.');
-  }
-
   if (
     destination.destinationType === 'user' &&
     targetUser &&
@@ -147,11 +109,7 @@ function summarizeBatch(action, repositoryResults, destination) {
 
 async function handleWatch(interaction, store, destinationType, targetUser) {
   const repository = normalizeRepository(interaction.options.getString('repository', true));
-  const destination = destinationForInteraction(interaction, destinationType, targetUser);
-
-  if (destinationType !== 'user' && !isManageAllowed(interaction)) {
-    throw new Error('You need Manage Server or Manage Channels permission to configure channel subscriptions.');
-  }
+  const destination = destinationForUser(interaction, destinationType === 'user' ? targetUser : interaction.user);
 
   if (destinationType === 'user' && targetUser?.id !== interaction.user.id && !isManageAllowed(interaction)) {
     throw new Error('You need Manage Server or Manage Channels permission to subscribe another user.');
@@ -166,9 +124,7 @@ async function handleWatch(interaction, store, destinationType, targetUser) {
   });
 
   const targetLabel =
-    destination.destinationType === 'channel'
-      ? `<#${destination.destinationId}>`
-      : `<@${destination.destinationId}>`;
+    `<@${destination.destinationId}>`;
 
   return reply(
     interaction,
@@ -180,11 +136,7 @@ async function handleWatch(interaction, store, destinationType, targetUser) {
 
 async function handleUnwatch(interaction, store, destinationType, targetUser) {
   const repository = normalizeRepository(interaction.options.getString('repository', true));
-  const destination = destinationForInteraction(interaction, destinationType, targetUser);
-
-  if (destinationType !== 'user' && !isManageAllowed(interaction)) {
-    throw new Error('You need Manage Server or Manage Channels permission to remove a channel subscription.');
-  }
+  const destination = destinationForUser(interaction, destinationType === 'user' ? targetUser : interaction.user);
 
   if (destinationType === 'user' && targetUser?.id !== interaction.user.id && !isManageAllowed(interaction)) {
     throw new Error('You need Manage Server or Manage Channels permission to remove another user.');
@@ -197,9 +149,7 @@ async function handleUnwatch(interaction, store, destinationType, targetUser) {
   });
 
   const targetLabel =
-    destination.destinationType === 'channel'
-      ? `<#${destination.destinationId}>`
-      : `<@${destination.destinationId}>`;
+    `<@${destination.destinationId}>`;
 
   return reply(
     interaction,
@@ -292,24 +242,12 @@ async function handleBulkUnwatch(interaction, store, targetUser) {
 
 function buildWatchesMessage(interaction, store) {
   const userSubscriptions = store.listSubscriptionsForDestination('user', interaction.user.id);
-  const channelSubscriptions = interaction.channelId
-    ? store.listSubscriptionsForDestination('channel', interaction.channelId)
-    : [];
 
   const lines = [];
   lines.push(`Your DM subscriptions: ${userSubscriptions.length || 0}`);
   if (userSubscriptions.length > 0) {
     for (const subscription of userSubscriptions) {
       lines.push(`- ${subscription.repo}`);
-    }
-  }
-
-  if (interaction.channelId) {
-    lines.push(`This channel subscriptions: ${channelSubscriptions.length || 0}`);
-    if (channelSubscriptions.length > 0) {
-      for (const subscription of channelSubscriptions) {
-        lines.push(`- ${subscription.repo}`);
-      }
     }
   }
 
@@ -352,11 +290,6 @@ export function createDiscordClient({ store, githubToken }) {
         return;
       }
 
-      if (group === 'watch' && subcommand === 'channel') {
-        await handleWatch(interaction, store, 'channel');
-        return;
-      }
-
       if (group === 'watch' && subcommand === 'many') {
         const target = interaction.options.getUser('target', false);
         await handleBulkWatch(interaction, store, target ?? undefined);
@@ -371,11 +304,6 @@ export function createDiscordClient({ store, githubToken }) {
       if (group === 'unwatch' && subcommand === 'user') {
         const target = interaction.options.getUser('target', true);
         await handleUnwatch(interaction, store, 'user', target);
-        return;
-      }
-
-      if (group === 'unwatch' && subcommand === 'channel') {
-        await handleUnwatch(interaction, store, 'channel');
         return;
       }
 

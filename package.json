@@ -1,7 +1,7 @@
 {
   "name": "yor",
   "version": "0.1.0",
-  "description": "Yor is a Discord bot that tracks GitHub repository activity and forwards updates to DMs or channels.",
+  "description": "Yor is a Discord bot that tracks GitHub repository activity and forwards updates to DMs.",
   "type": "module",
   "main": "src/index.js",
   "license": "GPL-3.0-only",

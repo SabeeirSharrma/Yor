@@ -40,17 +40,6 @@ export function buildCommandPayloads() {
           )
           .addSubcommand((subcommand) =>
             subcommand
-              .setName('channel')
-              .setDescription('Send repository updates to the current channel.')
-              .addStringOption((option) =>
-                option
-                  .setName('repository')
-                  .setDescription('Repository in owner/repo form.')
-                  .setRequired(true),
-              ),
-          )
-          .addSubcommand((subcommand) =>
-            subcommand
               .setName('many')
               .setDescription('Send updates for multiple repositories at once.')
               .addStringOption((option) =>
@@ -96,17 +85,6 @@ export function buildCommandPayloads() {
                 option
                   .setName('target')
                   .setDescription('User whose DM subscription should be removed.')
-                  .setRequired(true),
-              ),
-          )
-          .addSubcommand((subcommand) =>
-            subcommand
-              .setName('channel')
-              .setDescription('Remove the current channel subscription.')
-              .addStringOption((option) =>
-                option
-                  .setName('repository')
-                  .setDescription('Repository in owner/repo form.')
                   .setRequired(true),
               ),
           )

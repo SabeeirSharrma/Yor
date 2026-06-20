@@ -22,7 +22,6 @@ const githubToken = env('GITHUB_TOKEN', '');
 const githubWebhookSecret = env('GITHUB_WEBHOOK_SECRET', '');
 const port = Number(env('PORT', '3000'));
 const sqlitePath = env('SQLITE_PATH', './data/yor.sqlite');
-const discordGuildId = env('DISCORD_GUILD_ID', '');
 
 if (!Number.isInteger(port) || port <= 0) {
   throw new Error(`Invalid PORT value: ${process.env.PORT}`);
